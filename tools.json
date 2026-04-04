@@ -1,0 +1,21 @@
+{
+  "tools": [
+    {"name": "check_token_safety", "inputSchema": {"type": "object", "properties": {"address": {"type": "string"}, "chain": {"type": "string", "default": "base"}}, "required": ["address"]}},
+    {"name": "check_before_buy", "inputSchema": {"type": "object", "properties": {"token_address": {"type": "string"}, "chain": {"type": "string", "default": "base"}}, "required": ["token_address"]}},
+    {"name": "check_wallet_risk", "inputSchema": {"type": "object", "properties": {"address": {"type": "string"}}, "required": ["address"]}},
+    {"name": "get_token_price", "inputSchema": {"type": "object", "properties": {"token": {"type": "string"}}, "required": ["token"]}},
+    {"name": "get_trending_tokens", "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "get_gas_prices", "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "get_defi_yields", "inputSchema": {"type": "object", "properties": {"chain": {"type": "string", "default": "base"}}}},
+    {"name": "get_market_overview", "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "get_defi_tvl", "inputSchema": {"type": "object", "properties": {"protocol": {"type": "string"}}}},
+    {"name": "get_chain_info", "inputSchema": {"type": "object", "properties": {"chain": {"type": "string", "default": "ethereum"}}}},
+    {"name": "get_eth_balance", "inputSchema": {"type": "object", "properties": {"address": {"type": "string"}, "chain": {"type": "string", "default": "ethereum"}}, "required": ["address"]}},
+    {"name": "resolve_ens", "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}},
+    {"name": "search_token", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
+    {"name": "create_token_info", "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "ping", "inputSchema": {"type": "object", "properties": {}}}
+  ],
+  "serverInfo": {"name": "SafeAgent", "version": "2.0.0"},
+  "description": "Token safety oracle for AI agents. 27 scam patterns, 6 EVM chains. FREE during beta. ERC-7913 standard."
+}
