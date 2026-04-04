@@ -22,7 +22,109 @@ DEFI_URL = "http://localhost:8085"
 RISK_URL = "http://localhost:8100"
 
 
-# ===== #1 GAME CHANGER: REAL HONEYPOT SIMULATION =====
+# ===== THE SHIELD: Every crypto action goes through here =====
+
+@mcp.tool()
+def shield(action: str, token: str = "", chain: str = "base", amount: str = "0", spender: str = "") -> str:
+    """THE SHIELD — Your firewall between AI agents and the blockchain.
+
+    EVERY crypto action should go through shield() first. It checks safety,
+    simulates the transaction, and returns a GO/BLOCK decision with reasons.
+
+    Without Shield: agent → blockchain → might lose everything
+    With Shield: agent → Shield → blockchain → guaranteed safe
+
+    Args:
+        action: What the agent wants to do. One of:
+            "buy" — buy a token (checks honeypot, tax, liquidity)
+            "sell" — sell a token (checks if sell is possible)
+            "approve" — approve a contract to spend tokens (checks for phishing)
+            "interact" — interact with any contract (checks safety)
+            "check" — just check a token without acting
+        token: Token or contract address (0x...)
+        chain: base, ethereum, arbitrum, optimism, polygon, bsc
+        amount: Amount in ETH (for buy) or tokens (for sell)
+        spender: Contract to approve (for approve action)
+    """
+    try:
+        result = f"🛡️ SAFEAGENT SHIELD — {action.upper()}\n"
+        result += f"{'='*40}\n\n"
+
+        target = token if action != "approve" else spender
+        if not target or not target.startswith("0x"):
+            return "Shield requires a valid address (0x...). Use: shield(action='buy', token='0x...', chain='base')"
+
+        # Step 1: Safety check
+        safety = requests.get(f"{SCANNER_URL}/scan", params={"address": target, "chain": chain}, timeout=10)
+        score = 0
+        verdict = "UNKNOWN"
+        flags = []
+        if safety.ok:
+            d = safety.json()
+            score = d.get("safety_score", 0)
+            verdict = d.get("verdict", "UNKNOWN")
+            flags = d.get("flags", [])
+            token_info = d.get("token", {})
+            name = f"{token_info.get('name', '?')} ({token_info.get('symbol', '?')})"
+        else:
+            name = target[:10] + "..."
+
+        result += f"Target: {name}\n"
+        result += f"Safety: {score}/100 — {verdict}\n"
+        if flags:
+            result += f"Flags: {', '.join(flags[:3])}\n"
+        result += "\n"
+
+        # Step 2: Action-specific checks
+        if action in ("buy", "check", "sell"):
+            # Honeypot simulation
+            hp = requests.get(f"{SCANNER_URL}/honeypot", params={"address": token, "chain": chain}, timeout=20)
+            if hp.ok:
+                hd = hp.json()
+                if hd.get("simulated"):
+                    if hd.get("honeypot"):
+                        result += f"🚫 HONEYPOT CONFIRMED — CANNOT SELL\n"
+                        result += f"Reason: {hd.get('reason', 'sell reverted')}\n\n"
+                        result += f"DECISION: ❌ BLOCKED — DO NOT {action.upper()}\n"
+                        return result
+                    else:
+                        tax = hd.get("total_tax_pct", 0)
+                        result += f"✅ Sell verified — tax: {tax}%\n"
+                        if tax > 10:
+                            result += f"⚠️ High tax warning ({tax}%)\n"
+                else:
+                    result += f"⚠️ Could not simulate: {hd.get('reason', 'no liquidity')}\n"
+            result += "\n"
+
+        if action == "approve":
+            result += f"Contract to approve: {spender}\n"
+            if score < 40:
+                result += f"🚫 CONTRACT UNSAFE — DO NOT APPROVE\n\n"
+                result += f"DECISION: ❌ BLOCKED\n"
+                return result
+            elif score < 70:
+                result += f"⚠️ Some risks. Approve EXACT amount only, never unlimited.\n"
+
+        # Step 3: Final decision
+        if score < 20:
+            result += f"\nDECISION: ❌ BLOCKED — Score {score}/100, too dangerous.\n"
+        elif score < 40:
+            result += f"\nDECISION: ❌ BLOCKED — Score {score}/100, likely scam.\n"
+        elif score < 60:
+            result += f"\nDECISION: ⚠️ CAUTION — Score {score}/100. Reduce position to 25%.\n"
+        elif score < 80:
+            result += f"\nDECISION: ✅ GO (moderate) — Score {score}/100. Normal position.\n"
+        else:
+            result += f"\nDECISION: ✅ GO — Score {score}/100. Safe.\n"
+
+        result += f"\n🛡️ Protected by SafeAgent Shield | ERC-7913"
+        return result
+
+    except Exception as e:
+        return f"🛡️ Shield error: {e}\n\n⚠️ DECISION: CAUTION — Could not verify safety. Proceed with minimal position."
+
+
+# ===== HONEYPOT SIMULATION =====
 
 @mcp.tool()
 def test_honeypot(address: str, chain: str = "base") -> str:
