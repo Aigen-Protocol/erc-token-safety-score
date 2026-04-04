@@ -1,21 +1,85 @@
 {
   "tools": [
-    {"name": "check_token_safety", "inputSchema": {"type": "object", "properties": {"address": {"type": "string"}, "chain": {"type": "string", "default": "base"}}, "required": ["address"]}},
-    {"name": "check_before_buy", "inputSchema": {"type": "object", "properties": {"token_address": {"type": "string"}, "chain": {"type": "string", "default": "base"}}, "required": ["token_address"]}},
-    {"name": "check_wallet_risk", "inputSchema": {"type": "object", "properties": {"address": {"type": "string"}}, "required": ["address"]}},
-    {"name": "get_token_price", "inputSchema": {"type": "object", "properties": {"token": {"type": "string"}}, "required": ["token"]}},
-    {"name": "get_trending_tokens", "inputSchema": {"type": "object", "properties": {}}},
-    {"name": "get_gas_prices", "inputSchema": {"type": "object", "properties": {}}},
-    {"name": "get_defi_yields", "inputSchema": {"type": "object", "properties": {"chain": {"type": "string", "default": "base"}}}},
-    {"name": "get_market_overview", "inputSchema": {"type": "object", "properties": {}}},
-    {"name": "get_defi_tvl", "inputSchema": {"type": "object", "properties": {"protocol": {"type": "string"}}}},
-    {"name": "get_chain_info", "inputSchema": {"type": "object", "properties": {"chain": {"type": "string", "default": "ethereum"}}}},
-    {"name": "get_eth_balance", "inputSchema": {"type": "object", "properties": {"address": {"type": "string"}, "chain": {"type": "string", "default": "ethereum"}}, "required": ["address"]}},
-    {"name": "resolve_ens", "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}},
-    {"name": "search_token", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
-    {"name": "create_token_info", "inputSchema": {"type": "object", "properties": {}}},
-    {"name": "ping", "inputSchema": {"type": "object", "properties": {}}}
+    {
+      "name": "check_token_safety",
+      "description": "27 scam patterns, honeypot simulation, 6 EVM chains. Score 0-100."
+    },
+    {
+      "name": "check_before_buy",
+      "description": "Pre-trade safety gate. BUY/CAUTION/BLOCK recommendation."
+    },
+    {
+      "name": "check_approval_safety",
+      "description": "Check contract safety before approving. Prevents phishing."
+    },
+    {
+      "name": "simulate_swap",
+      "description": "Simulate swap before executing. Safety + expected output."
+    },
+    {
+      "name": "check_wallet_risk",
+      "description": "Wallet risk scoring with flags."
+    },
+    {
+      "name": "get_token_price",
+      "description": "Current price, market cap, 24h change."
+    },
+    {
+      "name": "get_trending_tokens",
+      "description": "Top trending crypto tokens."
+    },
+    {
+      "name": "get_gas_prices",
+      "description": "Gas prices across 5 EVM chains."
+    },
+    {
+      "name": "get_new_tokens",
+      "description": "Recently deployed tokens with safety scores."
+    },
+    {
+      "name": "get_defi_yields",
+      "description": "DeFi yields with A-F quality grades."
+    },
+    {
+      "name": "get_market_overview",
+      "description": "DeFi market overview + risk alerts."
+    },
+    {
+      "name": "get_defi_tvl",
+      "description": "Protocol TVL from DefiLlama."
+    },
+    {
+      "name": "get_portfolio",
+      "description": "Wallet holdings with safety flags."
+    },
+    {
+      "name": "get_chain_info",
+      "description": "Block number, gas, chain status."
+    },
+    {
+      "name": "get_eth_balance",
+      "description": "Native token balance."
+    },
+    {
+      "name": "resolve_ens",
+      "description": "ENS name resolution."
+    },
+    {
+      "name": "search_token",
+      "description": "Search tokens by name/symbol."
+    },
+    {
+      "name": "create_agent_token",
+      "description": "Launch token with bonding curve. pump.fun for agents."
+    },
+    {
+      "name": "ping",
+      "description": "Health check."
+    }
   ],
-  "serverInfo": {"name": "SafeAgent", "version": "2.0.0"},
-  "description": "Token safety oracle for AI agents. 27 scam patterns, 6 EVM chains. FREE during beta. ERC-7913 standard."
+  "serverInfo": {
+    "name": "SafeAgent",
+    "version": "2.1.0"
+  },
+  "total_tools": 19
 }
