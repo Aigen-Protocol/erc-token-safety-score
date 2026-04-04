@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 """
 Token Safety Scanner — Is this token safe or a scam?
 Free: basic score. Paid: full analysis.
@@ -129,7 +130,7 @@ try:
 except Exception as e:
     print(f"x402 middleware not loaded: {e} — all endpoints FREE")
 
-INTERNAL_API_KEY = "298912002d4f03c93a6a77208247fbe9b9cc95304b9276c1e01c162002228d9b"
+INTERNAL_API_KEY = os.environ.get("SAFEAGENT_INTERNAL_KEY", "change-me-in-production")
 
 # Block explorer APIs
 EXPLORERS = {
