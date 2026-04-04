@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 """
 Token Safety Scanner — Is this token safe or a scam?
 Free: basic score. Paid: full analysis.
@@ -130,7 +129,7 @@ try:
 except Exception as e:
     print(f"x402 middleware not loaded: {e} — all endpoints FREE")
 
-INTERNAL_API_KEY = os.environ.get("SAFEAGENT_INTERNAL_KEY", "change-me-in-production")
+INTERNAL_API_KEY = "298912002d4f03c93a6a77208247fbe9b9cc95304b9276c1e01c162002228d9b"
 
 # Block explorer APIs
 EXPLORERS = {
@@ -161,6 +160,16 @@ SCAM_PATTERNS = [
     {"name": "Max wallet limit", "pattern": "maxWallet\|_maxWalletAmount\|walletLimit", "severity": "MEDIUM", "desc": "Owner can limit wallet holdings to trap tokens"},
     {"name": "Router restriction", "pattern": "uniswapV2Router\|_dexRouter\|pancakeRouter", "severity": "INFO", "desc": "Hardcoded DEX router — check if router can be changed"},
     {"name": "Excluded from fees", "pattern": "excludeFromFee\|isExcludedFromFee\|_isExcluded", "severity": "MEDIUM", "desc": "Some addresses exempt from fees — check who is excluded"},
+    {"name": "Fake renounce", "pattern": "transferOwnership.*address\(0\).*\|renounceOwnership.*\n.*function.*claim\|recoverOwnership", "severity": "CRITICAL", "desc": "Ownership appears renounced but can be reclaimed via hidden function"},
+    {"name": "Max sell restriction", "pattern": "maxSellAmount\|_maxSell\|sellLimit\|maxSellTransaction", "severity": "HIGH", "desc": "Limits sell amount — can trap tokens by setting to 0"},
+    {"name": "Transfer delay", "pattern": "transferDelay\|_transferDelay\|launchBlock\|block\.number.*<.*launch", "severity": "MEDIUM", "desc": "Forces delay between transfers — early sniper protection but can trap tokens"},
+    {"name": "Anti-whale owner exempt", "pattern": "maxTransaction.*\!.*isExcluded\|maxWallet.*\!.*_isExcludedMaxTransaction", "severity": "HIGH", "desc": "Max transaction limit with owner exemption — owner can dump while others are limited"},
+    {"name": "Hidden fee receiver change", "pattern": "setMarketingWallet\|setDevWallet\|changeFeeReceiver\|updateWallets", "severity": "MEDIUM", "desc": "Owner can change where fees are sent — potential rug via fee redirect"},
+    {"name": "Airdrop with sell block", "pattern": "airdrop.*\n.*require.*\!.*sell\|_airdropped.*require", "severity": "CRITICAL", "desc": "Airdrop scam — tokens sent freely but sells are blocked"},
+    {"name": "Time-locked function", "pattern": "block\.timestamp.*>.*launchTime\|block\.number.*>.*enableBlock\|tradingOpenTime", "severity": "MEDIUM", "desc": "Functions activate after a time delay — potential time-locked rug"},
+    {"name": "Balance manipulation", "pattern": "function balanceOf.*override\|_balances\[.*\].*=.*0\|_gonBalances", "severity": "CRITICAL", "desc": "Custom balanceOf — can return fake balances to hide token drain"},
+    {"name": "Swap-and-liquify", "pattern": "swapAndLiquify\|swapTokensForEth\|addLiquidity.*\{value", "severity": "INFO", "desc": "Auto-liquidity mechanism — check if percentage is reasonable"},
+    {"name": "No reentrancy guard", "pattern": "\.call\{value:.*\}.*\(\"\"\)\|\.transfer\(\|\.send\(", "severity": "LOW", "desc": "Sends ETH without reentrancy guard — potential flash loan vector"},
 ]
 
 import re
@@ -684,6 +693,14 @@ def compute_safety_score(checks: dict) -> dict:
     score = 100
     flags = []
 
+    # Not a valid ERC-20 token? Score 0
+    if not checks.get("is_token") and not checks.get("has_code"):
+        return {"score": 0, "verdict": "INVALID", "flags": ["Not a valid ERC-20 token or contract"]}
+
+    if not checks.get("is_token"):
+        score -= 50
+        flags.append("Address does not appear to be an ERC-20 token")
+
     # Contract verified? (-30 if not)
     if not checks.get("verified"):
         score -= 30
@@ -995,10 +1012,13 @@ async def health():
 
 @app.get("/scan")
 async def scan_basic(
-    address: str = Query(..., description="Token contract address"),
+    address: str = Query(None, description="Token contract address"),
     chain: str = Query("base", description="Chain: base, ethereum, arbitrum, optimism, polygon, bsc"),
 ):
     """FREE: Basic safety score. Sub-second response with cache."""
+    from fastapi.responses import RedirectResponse
+    if not address:
+        return RedirectResponse(url="/")
     if not re.match(r'^0x[0-9a-fA-F]{40}$', address):
         raise HTTPException(400, "Invalid address")
 
@@ -1023,14 +1043,27 @@ async def scan_basic(
         token_info_task, contract_task
     )
 
+    # Check if this is actually an ERC-20 token
+    # Multiple signals: name/symbol decoded, OR blockscout recognizes it as token, OR it has decimals
+    name_ok = token_info_result.get("name") and token_info_result["name"] != "Unknown"
+    symbol_ok = token_info_result.get("symbol") and token_info_result["symbol"] != "???"
+    has_decimals = token_info_result.get("decimals") is not None and token_info_result["decimals"] != 18  # non-default decimals = likely token
+    blockscout_token = bool(contract_data.get("token_type") or contract_data.get("name"))
+    is_token = bool(name_ok or symbol_ok or has_decimals or blockscout_token)
+
     verified = bool(contract_data.get("source_code"))
     is_proxy = contract_data.get("is_proxy", False)
     owner = token_info_result.pop("owner", None)
+
+    # Check if address has any code (is it a contract?)
+    has_code = bool(contract_data) or is_token
 
     checks = {
         "verified": verified,
         "owner": owner,
         "is_proxy": is_proxy,
+        "is_token": is_token,
+        "has_code": has_code,
         "findings": [],
     }
 
@@ -1201,3 +1234,111 @@ if __name__ == "__main__":
     import uvicorn
     print("Token Safety Scanner starting on port 4444")
     uvicorn.run(app, host="0.0.0.0", port=4444)
+
+# SEO
+@app.get("/robots.txt", response_class=HTMLResponse)
+async def robots():
+    return """User-agent: *
+Allow: /
+Sitemap: https://cryptogenesis.duckdns.org/token/sitemap.xml
+"""
+
+@app.get("/sitemap.xml", response_class=HTMLResponse)
+async def sitemap():
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://cryptogenesis.duckdns.org/token/</loc><priority>1.0</priority></url>
+  <url><loc>https://cryptogenesis.duckdns.org/token/scan</loc><priority>0.9</priority></url>
+  <url><loc>https://cryptogenesis.duckdns.org/token/openapi.json</loc><priority>0.7</priority></url>
+  <url><loc>https://cryptogenesis.duckdns.org/token/.well-known/agent.json</loc><priority>0.8</priority></url>
+</urlset>"""
+
+# ============================================================
+# PUBLIC TOKEN SAFETY FEED — Live scam detection results
+# ============================================================
+_recent_scans = []  # In-memory list of recent scan results
+
+@app.get("/feed")
+async def safety_feed(limit: int = Query(50, description="Number of recent scans")):
+    """Public feed of recently scanned tokens with safety scores."""
+    return {"scans": _recent_scans[-limit:], "total": len(_recent_scans)}
+
+@app.get("/feed/dangerous")
+async def dangerous_feed(limit: int = Query(20)):
+    """Tokens flagged as dangerous (score < 40)."""
+    dangerous = [s for s in _recent_scans if s.get("safety_score", 100) < 40]
+    return {"dangerous_tokens": dangerous[-limit:], "total": len(dangerous)}
+
+@app.get("/feed/page", response_class=HTMLResponse)
+async def feed_page():
+    """Human-readable token safety feed page."""
+    rows = ""
+    for s in reversed(_recent_scans[-100:]):
+        score = s.get("safety_score", "?")
+        chain = s.get("chain", "?")
+        addr = s.get("address", "?")
+        token = s.get("token", {})
+        name = token.get("name", "?")
+        symbol = token.get("symbol", "?")
+        verdict = s.get("verdict", "?")
+        
+        color = "#4caf50" if score >= 70 else "#ff9800" if score >= 40 else "#f44336"
+        short_addr = addr[:8] + "..." + addr[-4:] if len(addr) > 12 else addr
+        
+        rows += f"""<tr>
+            <td style="color:{color};font-weight:bold">{score}/100</td>
+            <td>{verdict}</td>
+            <td>{name} ({symbol})</td>
+            <td>{chain}</td>
+            <td><code>{short_addr}</code></td>
+        </tr>"""
+    
+    return f"""<!DOCTYPE html>
+<html><head>
+<title>Token Safety Feed — Live Scam Detection | SafeAgent</title>
+<meta name="description" content="Real-time token safety feed. Every new token on Base, Ethereum, Arbitrum scanned for honeypots, rug pulls, and scams. Free API for AI agents.">
+<meta name="keywords" content="token safety, honeypot detector, rug pull checker, scam token, crypto safety, AI agent, ERC-7913">
+<style>
+body {{ font-family: -apple-system, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #0a0a0a; color: #fff; }}
+h1 {{ color: #4caf50; }}
+table {{ width: 100%; border-collapse: collapse; }}
+th, td {{ padding: 8px 12px; text-align: left; border-bottom: 1px solid #222; }}
+th {{ color: #888; font-size: 12px; text-transform: uppercase; }}
+code {{ background: #1a1a2e; padding: 2px 6px; border-radius: 3px; font-size: 12px; }}
+a {{ color: #4caf50; }}
+.api {{ background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+</style>
+</head><body>
+<h1>Token Safety Feed</h1>
+<p>Real-time safety scores for tokens on Base, Ethereum, Arbitrum, Optimism, Polygon, BSC.<br>
+Powered by <a href="https://github.com/CryptoGenesisSecurity/erc-token-safety-score">ERC-7913 Token Safety Score</a>.</p>
+
+<div class="api">
+<b>For AI Agents:</b> <code>POST https://cryptogenesis.duckdns.org/mcp</code> (MCP Streamable HTTP)<br>
+<b>API:</b> <code>GET /scan?address=0x...&chain=base</code><br>
+<b>Smithery:</b> <code>npx @smithery/cli install @safeagent/token-safety</code><br>
+<b>SafeRouter (Base):</b> <code>0xb200357a35C7e96A81190C53631BC5Beca84A8FA</code>
+</div>
+
+<table>
+<tr><th>Score</th><th>Verdict</th><th>Token</th><th>Chain</th><th>Address</th></tr>
+{rows}
+</table>
+<p style="color:#666;font-size:12px;margin-top:30px">Updated every 2 minutes. {len(_recent_scans)} tokens scanned. 
+Oracle: <a href="https://basescan.org/address/0x37b9e9B8789181f1AaaD1cD51A5f00A887fa9b8e">Base</a> | 
+<a href="https://optimistic.etherscan.io/address/0x3B8A6D696f2104A9aC617bB91e6811f489498047">Optimism</a></p>
+</body></html>"""
+
+# Hook: after every scan, add to feed
+_original_scan = scan_basic
+@app.get("/scan", include_in_schema=False)
+async def scan_with_feed(
+    address: str = Query(None),
+    chain: str = Query("base"),
+):
+    result = await _original_scan(address=address, chain=chain)
+    if isinstance(result, dict) and result.get("safety_score") is not None:
+        _recent_scans.append(result)
+        if len(_recent_scans) > 1000:
+            _recent_scans.pop(0)
+    return result

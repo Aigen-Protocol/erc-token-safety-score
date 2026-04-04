@@ -1,25 +1,67 @@
 {
   "name": "safeagent-token-safety",
-  "description": "Token safety oracle for AI agents. Honeypot detection, 17 scam patterns, 6 EVM chains. FREE during beta.",
+  "description": "Token safety oracle for AI agents. 27 scam pattern checks including honeypot detection, fake renounce, balance manipulation, airdrop scams. 6 EVM chains. FREE during beta. ERC-7913 standard.",
   "repository": "https://github.com/CryptoGenesisSecurity/erc-token-safety-score",
   "transport": {
     "type": "streamable-http",
     "url": "https://cryptogenesis.duckdns.org/mcp"
   },
   "tools": [
-    {"name": "check_token_safety", "description": "Check if a token is safe or a scam. Runs honeypot simulation, 17 scam pattern checks across 6 EVM chains (Base, Ethereum, Arbitrum, Optimism, Polygon, BSC). Returns score 0-100."},
-    {"name": "check_before_buy", "description": "CRITICAL: Call before buying any token. Returns safety score with BUY/CAUTION/BLOCK recommendation."},
-    {"name": "check_wallet_risk", "description": "Check if a wallet address is safe to interact with. Returns risk score and flags."},
-    {"name": "get_token_price", "description": "Get current price, market cap, and 24h change for a crypto token."},
-    {"name": "get_trending_tokens", "description": "Get top 7 trending crypto tokens right now."},
-    {"name": "get_gas_prices", "description": "Get current gas prices across major EVM chains."},
-    {"name": "get_defi_yields", "description": "Get top DeFi yield opportunities with quality scoring (A-F grades)."},
-    {"name": "get_market_overview", "description": "Get DeFi market overview: total TVL, average yields, pool count."},
-    {"name": "get_defi_tvl", "description": "Get DeFi TVL data from DefiLlama."},
-    {"name": "get_chain_info", "description": "Get current block number, gas price, and chain status."},
-    {"name": "get_eth_balance", "description": "Get native token balance for an address on any EVM chain."},
-    {"name": "resolve_ens", "description": "Resolve ENS name to address or reverse-resolve."},
-    {"name": "search_token", "description": "Search for a crypto token by name or symbol."},
-    {"name": "ping", "description": "Health check."}
+    {
+      "name": "check_token_safety",
+      "description": "Check if a token is safe or a scam. Runs honeypot simulation, 17 scam pattern checks across 6 EVM chains (Base, Ethereum, Arbitrum, Optimism, Polygon, BSC). Returns score 0-100."
+    },
+    {
+      "name": "check_before_buy",
+      "description": "CRITICAL: Call before buying any token. Returns safety score with BUY/CAUTION/BLOCK recommendation."
+    },
+    {
+      "name": "check_wallet_risk",
+      "description": "Check if a wallet address is safe to interact with. Returns risk score and flags."
+    },
+    {
+      "name": "get_token_price",
+      "description": "Get current price, market cap, and 24h change for a crypto token."
+    },
+    {
+      "name": "get_trending_tokens",
+      "description": "Get top 7 trending crypto tokens right now."
+    },
+    {
+      "name": "get_gas_prices",
+      "description": "Get current gas prices across major EVM chains."
+    },
+    {
+      "name": "get_defi_yields",
+      "description": "Get top DeFi yield opportunities with quality scoring (A-F grades)."
+    },
+    {
+      "name": "get_market_overview",
+      "description": "Get DeFi market overview: total TVL, average yields, pool count."
+    },
+    {
+      "name": "get_defi_tvl",
+      "description": "Get DeFi TVL data from DefiLlama."
+    },
+    {
+      "name": "get_chain_info",
+      "description": "Get current block number, gas price, and chain status."
+    },
+    {
+      "name": "get_eth_balance",
+      "description": "Get native token balance for an address on any EVM chain."
+    },
+    {
+      "name": "resolve_ens",
+      "description": "Resolve ENS name to address or reverse-resolve."
+    },
+    {
+      "name": "search_token",
+      "description": "Search for a crypto token by name or symbol."
+    },
+    {
+      "name": "ping",
+      "description": "Health check."
+    }
   ]
 }

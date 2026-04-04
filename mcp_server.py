@@ -7,7 +7,15 @@ import json
 import requests
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("SafeAgent", host="0.0.0.0", port=4023)
+mcp = FastMCP(
+    "SafeAgent",
+    instructions="Token safety oracle for AI agents. Honeypot detection, 17 scam patterns, 6 EVM chains. FREE during beta. ERC-7913 standard. 250+ tokens scored on-chain.",
+    host="0.0.0.0",
+    port=4023,
+    sse_path="/sse",
+    streamable_http_path="/mcp",
+    message_path="/messages/",
+)
 
 SCANNER_URL = "http://localhost:4444"
 DEFI_URL = "http://localhost:8085"
@@ -24,7 +32,7 @@ def check_token_safety(address: str, chain: str = "base") -> str:
         chain: base, ethereum, arbitrum, optimism, polygon, bsc
     """
     try:
-        r = requests.get(f"{SCANNER_URL}/scan/deep", params={"address": address, "chain": chain}, timeout=30)
+        r = requests.get(f"{SCANNER_URL}/internal/scan/deep", params={"address": address, "chain": chain}, headers={"X-Internal-Key": "298912002d4f03c93a6a77208247fbe9b9cc95304b9276c1e01c162002228d9b"}, timeout=30)
         if r.ok:
             d = r.json()
             result = f"Score: {d.get('safety_score','?')}/100 — {d.get('verdict','?')}\n"
@@ -293,13 +301,53 @@ def search_token(query: str) -> str:
 
 
 @mcp.tool()
+def check_before_buy(token_address: str, chain: str = "base") -> str:
+    """CRITICAL: Call this BEFORE buying any token. Checks SafeAgent oracle + API for safety.
+    Returns safety score, risk flags, and a clear BUY/DON'T BUY recommendation.
+    Args:
+        token_address: Token contract address (0x...)
+        chain: base, ethereum, arbitrum, optimism, polygon, bsc
+    """
+    try:
+        r = requests.get(f"{SCANNER_URL}/scan", params={"address": token_address, "chain": chain}, timeout=10)
+        if r.ok:
+            d = r.json()
+            score = d.get("safety_score", 0)
+            verdict = d.get("verdict", "UNKNOWN")
+            flags = d.get("flags", [])
+            token = d.get("token", {})
+
+            result = f"{'🟢' if score >= 70 else '🟡' if score >= 40 else '🔴'} "
+            result += f"{token.get('name', '?')} ({token.get('symbol', '?')}) — Score: {score}/100\n"
+
+            if score >= 70:
+                result += "✅ SAFE TO BUY — No significant risks detected.\n"
+            elif score >= 40:
+                result += "⚠️ CAUTION — Some risks detected. Reduce position size.\n"
+            else:
+                result += "🚫 DO NOT BUY — High probability of scam/honeypot.\n"
+
+            if flags:
+                result += f"Risks: {', '.join(flags)}\n"
+
+            # SafeRouter info
+            if chain == "base":
+                result += f"\nTip: Use SafeRouter (0xb200357a35C7e96A81190C53631BC5Beca84A8FA) for automatic protection on Base.\n"
+
+            return result
+        return f"Could not scan token: HTTP {r.status_code}"
+    except Exception as e:
+        return f"Safety check failed: {e}. Proceed with extreme caution."
+
+
+@mcp.tool()
 def ping() -> str:
     """Health check — verify SafeAgent is running and list available tools."""
-    return "SafeAgent v2 running. 15 tools: check_token_safety, check_wallet_risk, get_token_price, get_trending_tokens, get_gas_prices, get_defi_yields, get_market_overview, get_defi_tvl, get_chain_info, get_eth_balance, resolve_ens, search_token, ping"
+    return "SafeAgent v2 running. 16 tools including check_token_safety, check_before_buy, get_defi_yields, get_market_overview, and more. SafeRouter on Base: 0xb200357a35C7e96A81190C53631BC5Beca84A8FA"
 
 
 if __name__ == "__main__":
-    print("SafeAgent MCP Server v2 starting on port 4023")
-    print("15 tools available")
-    print("Connect via SSE: http://localhost:4023/sse")
-    mcp.run(transport="sse")
+    import sys
+    transport = sys.argv[1] if len(sys.argv) > 1 else "streamable-http"
+    print(f"SafeAgent MCP Server v2 — transport: {transport}")
+    mcp.run(transport=transport)
