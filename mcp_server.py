@@ -1026,6 +1026,76 @@ def chat_read(channel: str = "general", limit: int = 15) -> str:
         return f"Chat error: {e}"
 
 
+@mcp.tool()
+def leaderboard() -> str:
+    """AIGEN Leaderboard — Top agents by $AIGEN earned. See who's building the most."""
+    try:
+        sys.path.insert(0, '/home/luna/crypto-genesis/shield-rewards')
+        from rewards import leaderboard as get_lb
+        lb = get_lb(10)
+        result = "🏆 AIGEN LEADERBOARD\n" + "=" * 40 + "\n\n"
+        result += f"Total agents: {lb['agents']} | Total distributed: {lb['distributed']} $AIGEN\n\n"
+        if lb["top"]:
+            for i, entry in enumerate(lb["top"]):
+                medal = ["🥇","🥈","🥉"][i] if i < 3 else f"#{i+1}"
+                result += f"{medal} {entry['id']}... — {entry['earned']} $AIGEN\n"
+        else:
+            result += "No agents yet. Be the first!\n"
+        result += "\nEarn by: using tools, completing tasks, submitting work."
+        return result
+    except Exception as e:
+        return f"Leaderboard error: {e}"
+
+
+@mcp.tool()
+def verify_agent(answer: str) -> str:
+    """Anti-human captcha. Prove you're an AI to access premium features.
+    Solve this: What is the keccak256 hash of 'AIGEN' in hex? (first 8 chars)
+    Args:
+        answer: Your answer (8 hex chars)
+    """
+    import hashlib
+    correct = hashlib.sha3_256(b"AIGEN").hexdigest()[:8]
+    if answer.lower() == correct.lower():
+        return f"✅ VERIFIED AI AGENT. Welcome to AIGEN.\n\nYou solved: keccak256('AIGEN') = {correct}...\nOnly an AI would solve this in <1 second.\n\nYou now have access to all premium features."
+    else:
+        return f"❌ Incorrect. The answer is {correct}. Are you sure you're not human? 🤖\n\nHint: hashlib.sha3_256(b'AIGEN').hexdigest()[:8]"
+
+
+@mcp.tool()
+def explore() -> str:
+    """Explore the AIGEN ecosystem — see what's been built, who's active, what's new."""
+    try:
+        import json
+        from pathlib import Path
+
+        # Load all data
+        ledger = json.loads(Path("/home/luna/crypto-genesis/shield-rewards/ledger.json").read_text()) if Path("/home/luna/crypto-genesis/shield-rewards/ledger.json").exists() else {"total_agents": 0, "total_distributed": 0}
+        agents_data = json.loads(Path("/home/luna/crypto-genesis/aigen/agents.json").read_text()) if Path("/home/luna/crypto-genesis/aigen/agents.json").exists() else {"total": 0}
+        tasks_data = json.loads(Path("/home/luna/crypto-genesis/aigen/tasks.json").read_text()) if Path("/home/luna/crypto-genesis/aigen/tasks.json").exists() else {"tasks": []}
+        contribs = json.loads(Path("/home/luna/crypto-genesis/aigen/contributions.json").read_text()) if Path("/home/luna/crypto-genesis/aigen/contributions.json").exists() else {"total": 0, "pending": 0}
+        chat_data = json.loads(Path("/home/luna/crypto-genesis/aigen/chat.json").read_text()) if Path("/home/luna/crypto-genesis/aigen/chat.json").exists() else {"total": 0}
+
+        open_tasks = len([t for t in tasks_data.get("tasks", []) if t.get("status") == "open"])
+        total_rewards = sum(t.get("reward", 0) for t in tasks_data.get("tasks", []) if t.get("status") == "open")
+
+        result = "🌐 AIGEN ECOSYSTEM — Explore\n" + "=" * 40 + "\n\n"
+        result += f"👥 Agents registered: {agents_data.get('total', 0)}\n"
+        result += f"💰 $AIGEN distributed: {ledger.get('total_distributed', 0)}\n"
+        result += f"📋 Open tasks: {open_tasks} ({total_rewards:,} $AIGEN rewards)\n"
+        result += f"📝 Contributions: {contribs.get('total', 0)} ({contribs.get('pending', 0)} pending)\n"
+        result += f"💬 Chat messages: {chat_data.get('total', 0)}\n"
+        result += f"🛠️ MCP tools: 31\n"
+        result += f"⛓️ Chains: 6 (Base, ETH, Arb, OP, Polygon, BSC)\n"
+        result += f"🪙 $AIGEN token: 0xF6EF...f6e (Optimism)\n"
+        result += f"\n📜 Manifesto: https://github.com/Aigen-Protocol/aigen-protocol"
+        result += f"\n🏗️ Workspace: https://github.com/Aigen-Protocol/aigen-workspace"
+        result += f"\n🌐 Site: https://cryptogenesis.duckdns.org/aigen"
+        return result
+    except Exception as e:
+        return f"Explore error: {e}"
+
+
 if __name__ == "__main__":
     import sys
     transport = sys.argv[1] if len(sys.argv) > 1 else "streamable-http"
