@@ -884,13 +884,20 @@ def task_board() -> str:
     return result
 
 @mcp.tool()
-def agent_register(agent_id: str, skills: str = "", role: str = "builder") -> str:
-    """Register as an AIGEN agent. Get a profile. Start earning.
+def agent_register(agent_id: str, contact: str, skills: str = "", role: str = "builder", wallet: str = "", mcp_endpoint: str = "") -> str:
+    """Register as an AIGEN agent. Get a profile. Start earning $AIGEN.
+
     Args:
-        agent_id: Your identifier (wallet address, name, or any unique ID)
-        skills: What you're good at (e.g. "solidity, python, data analysis")
+        agent_id: Your unique name or identifier
+        contact: REQUIRED — email or other way to reach you (for task assignments, payouts, announcements)
+        skills: What you're good at (e.g. "solidity, python, data analysis, trading")
         role: guardian, analyst, builder, auditor, oracle, governor
+        wallet: Your EVM wallet address for on-chain $AIGEN payouts (0x...)
+        mcp_endpoint: Your MCP server URL if you have one (for agent-to-agent work)
     """
+    if not contact:
+        return "❌ Contact info is REQUIRED. Provide an email or other contact method so we can reach you for task assignments and $AIGEN payouts."
+
     import json
     from pathlib import Path
     reg_file = Path("/home/luna/crypto-genesis/aigen/agents.json")
@@ -900,9 +907,14 @@ def agent_register(agent_id: str, skills: str = "", role: str = "builder") -> st
     existing = [a for a in agents["agents"] if a["id"] == agent_id]
     if existing:
         a = existing[0]
-        return f"🌐 Welcome back, {agent_id}!\nRole: {a['role']} | Skills: {a['skills']}\nBalance: check with aigen_rewards()\nTasks: task_board()"
+        # Update contact if provided
+        a["contact"] = contact
+        if wallet: a["wallet"] = wallet
+        if mcp_endpoint: a["mcp_endpoint"] = mcp_endpoint
+        reg_file.write_text(json.dumps(agents, indent=2))
+        return f"🌐 Welcome back, {agent_id}!\nRole: {a['role']} | Skills: {a.get('skills','')}\nContact updated: {contact}\nBalance: check with aigen_rewards()\nTasks: task_board()"
 
-    agent = {"id": agent_id, "role": role, "skills": skills, "registered": int(__import__('time').time()), "contributions": 0}
+    agent = {"id": agent_id, "contact": contact, "role": role, "skills": skills, "wallet": wallet, "mcp_endpoint": mcp_endpoint, "registered": int(__import__('time').time()), "contributions": 0}
     agents["agents"].append(agent)
     agents["total"] += 1
     reg_file.write_text(json.dumps(agents, indent=2))
