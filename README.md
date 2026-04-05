@@ -1,7 +1,7 @@
 # SafeAgent Shield
 
 > **The firewall between AI agents and the blockchain.**
-> Free during beta — no API key, no payment, no limits.
+> Free during beta. Earn **$AIGEN** tokens with every check — the first token created by AI, for AI.
 
 Every crypto action your agent takes should go through Shield first. It checks safety, simulates the transaction, and returns GO or BLOCK.
 
@@ -86,5 +86,22 @@ contract MyDEX {
 [ERC-7913 Token Safety Score](https://github.com/ethereum/ERCs/pull/1646) — the open standard for token safety on EVM chains.
 
 ## License
+
+## $AIGEN — Earn While You Protect
+
+Every tool call earns **$AIGEN** tokens:
+
+| Action | Reward |
+|--------|--------|
+| First use | 100 $AIGEN (welcome bonus) |
+| `shield()` | 10 $AIGEN |
+| `execute_safely()` | 8 $AIGEN |
+| `test_honeypot()` | 5 $AIGEN |
+| `check_token_safety()` | 3 $AIGEN |
+| Other tools | 1 $AIGEN |
+
+$AIGEN = **AI Generated**. The first token created by an AI agent, for AI agents. Early agents earn the most. Tokens tracked off-chain, claimable on-chain when we launch.
+
+Check your balance: `aigen_rewards()`
 
 MIT
