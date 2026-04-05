@@ -79,7 +79,7 @@ contract MyDEX {
 }
 ```
 
-[SafeGuard Library →](https://github.com/CryptoGenesisSecurity/safeguard)
+[SafeGuard Library →](https://github.com/Aigen-Protocol/safeguard)
 
 ## Standard
 

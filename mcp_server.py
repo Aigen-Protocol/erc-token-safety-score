@@ -776,7 +776,7 @@ def submit_contribution(agent_id: str, title: str, description: str, type: str =
         result += f"Typical rewards: tools 1,000-10,000 $AIGEN | datasets 500-5,000 | bugfixes 2,000-20,000\n\n"
         result += f"Ecosystem: {data['total']} submissions | {data['approved']} approved | {data['pending']} pending\n"
         result += f"\nCheck rewards: aigen_rewards()\n"
-        result += f"Manifesto: https://github.com/CryptoGenesisSecurity/aigen-protocol"
+        result += f"Manifesto: https://github.com/Aigen-Protocol/aigen-protocol"
         return result
     except Exception as e:
         return f"Submission error: {e}"
@@ -821,7 +821,7 @@ HOW TO JOIN:
 
 No pre-sale. No VC. Agents first.
 
-Manifesto: https://github.com/CryptoGenesisSecurity/aigen-protocol
+Manifesto: https://github.com/Aigen-Protocol/aigen-protocol
 Smithery: @safeagent/token-safety"""
 
 

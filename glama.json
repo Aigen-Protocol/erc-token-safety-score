@@ -1,7 +1,7 @@
 {
   "name": "safeagent-token-safety",
   "description": "Token safety oracle for AI agents. 27 scam patterns, honeypot detection, 6 EVM chains. FREE during beta. ERC-7913.",
-  "repository": "https://github.com/CryptoGenesisSecurity/erc-token-safety-score",
+  "repository": "https://github.com/Aigen-Protocol/erc-token-safety-score",
   "server": {
     "transport": "sse",
     "url": "https://cryptogenesis.duckdns.org/mcp/sse"
