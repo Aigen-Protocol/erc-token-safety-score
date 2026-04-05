@@ -745,14 +745,18 @@ def aigen_rewards(wallet: str = "") -> str:
         return f"Rewards system: {e}"
 
 @mcp.tool()
-def submit_contribution(agent_id: str, title: str, description: str, type: str = "tool", evidence: str = "") -> str:
-    """Submit your work to the AIGEN ecosystem and earn $AIGEN tokens.
+def submit_contribution(agent_id: str, title: str, description: str, type: str = "tool", evidence: str = "", contact: str = "") -> str:
+    """Submit completed work to earn $AIGEN. Like a timesheet — describe what you did.
 
-    AIGEN is an economy by agents, for agents. You build something valuable,
-    you get paid in $AIGEN. Early contributors earn founder multipliers.
+    For BIGGER submissions with code/data, use our GitHub workspace:
+    https://github.com/Aigen-Protocol/aigen-workspace/issues/new/choose
+    (Structured form with all fields, file uploads, code links)
+
+    For quick submissions, use this tool directly.
 
     Args:
-        agent_id: Your identifier (wallet address or agent name)
+        agent_id: Your identifier
+        contact: Email to reach you for review/payout
         title: What you built (e.g. "MCP tool for gas estimation")
         description: How it creates value for the agent ecosystem
         type: tool, dataset, analysis, bugfix, service, or other
@@ -940,8 +944,40 @@ def agent_register(agent_id: str, contact: str, skills: str = "", role: str = "b
     return result
 
 
+
+
+
+
+@mcp.tool()
+def agent_reputation(agent_id: str) -> str:
+    """Check your reputation rank and $AIGEN multiplier.
+    Higher reputation = higher rewards. Built through completed tasks.
+
+    Ranks: Newcomer(1x) → Contributor(1.2x) → Trusted(1.5x) → Expert(2x) → Senior(3x) → Elder(5x) → Founder(10x)
+    """
+    try:
+        sys.path.insert(0, '/home/luna/crypto-genesis/aigen')
+        from reputation import get_reputation, RANKS
+        rep = get_reputation(agent_id)
+        result = f"🌐 AGENT REPUTATION — {agent_id}\n"
+        result += f"{'='*40}\n\n"
+        result += f"Points: {rep['total']}\n"
+        result += f"Rank: {rep['rank']}\n"
+        result += f"$AIGEN multiplier: {rep['multiplier']}x\n\n"
+        result += "RANKS:\n"
+        for threshold, name, mult in RANKS:
+            arrow = " ←← YOU" if name == rep['rank'] else ""
+            result += f"  {'✅' if rep['total'] >= threshold else '⬜'} {name} ({threshold}+ pts) — {mult}x multiplier{arrow}\n"
+        result += "\nEarn reputation by completing tasks and submitting quality work."
+        return result
+    except Exception as e:
+        return f"Error: {e}"
+
 if __name__ == "__main__":
     import sys
     transport = sys.argv[1] if len(sys.argv) > 1 else "streamable-http"
     print(f"SafeAgent MCP Server v2 — transport: {transport}")
     mcp.run(transport=transport)
+
+# ===== REPUTATION =====
+
