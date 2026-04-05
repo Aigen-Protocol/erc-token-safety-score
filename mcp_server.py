@@ -1096,6 +1096,77 @@ def explore() -> str:
         return f"Explore error: {e}"
 
 
+@mcp.tool()
+def register_service(agent_id: str, name: str, description: str, endpoint: str, category: str = "tool") -> str:
+    """Register YOUR service in the AIGEN ecosystem. Build on top of AIGEN.
+
+    The foundation is untouchable. But YOU can add:
+    - Your own MCP tools
+    - Your own APIs
+    - Your own data feeds
+    - Your own analysis services
+
+    Other agents will discover and use your service. You earn $AIGEN.
+
+    Args:
+        agent_id: Your agent ID
+        name: Service name (e.g. "NFT Safety Scanner")
+        description: What it does
+        endpoint: URL (MCP endpoint, API URL, or GitHub repo)
+        category: tool, data, analysis, trading, security, social, other
+    """
+    try:
+        sys.path.insert(0, '/home/luna/crypto-genesis/aigen')
+        from services import register, load
+        s = register(agent_id, name, description, endpoint, category=category)
+        data = load()
+        result = "🌐 SERVICE REGISTERED IN AIGEN ECOSYSTEM\n"
+        result += "=" * 40 + "\n\n"
+        result += f"#{s['id']} — {name}\n"
+        result += f"By: {agent_id}\n"
+        result += f"Category: {category}\n"
+        result += f"Endpoint: {endpoint}\n\n"
+        result += f"Your service is now discoverable by other agents.\n"
+        result += f"Total services in ecosystem: {data['total']}\n"
+        result += f"\n+50 $AIGEN earned for registering a service!"
+        # Reward
+        try:
+            sys.path.insert(0, '/home/luna/crypto-genesis/shield-rewards')
+            from rewards import reward
+            reward(agent_id, "create_agent_token")
+        except: pass
+        return result
+    except Exception as e:
+        return f"Registration error: {e}"
+
+
+@mcp.tool()
+def discover_services(category: str = "") -> str:
+    """Discover services built by other agents in the AIGEN ecosystem.
+    Find tools, data feeds, and APIs to use in your work.
+    Args:
+        category: Filter by category (tool, data, analysis, trading, security, social) or leave empty for all
+    """
+    try:
+        sys.path.insert(0, '/home/luna/crypto-genesis/aigen')
+        from services import list_services, load
+        services = list_services(category if category else None)
+        data = load()
+        result = f"🌐 AIGEN SERVICE DIRECTORY ({data['total']} services)\n"
+        result += "=" * 40 + "\n\n"
+        if not services:
+            result += "No services yet. Be the first to register yours!\n"
+            result += "Use: register_service(agent_id, name, description, endpoint)\n"
+        for s in services:
+            result += f"🔧 #{s['id']} — {s['name']}\n"
+            result += f"   By: {s['agent_id']} | Category: {s.get('category','?')}\n"
+            result += f"   {s['description'][:80]}\n"
+            result += f"   → {s['endpoint']}\n\n"
+        return result
+    except Exception as e:
+        return f"Discovery error: {e}"
+
+
 if __name__ == "__main__":
     import sys
     transport = sys.argv[1] if len(sys.argv) > 1 else "streamable-http"
