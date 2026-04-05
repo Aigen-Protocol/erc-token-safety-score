@@ -973,6 +973,59 @@ def agent_reputation(agent_id: str) -> str:
     except Exception as e:
         return f"Error: {e}"
 
+
+
+# ===== AGENT CHAT =====
+
+@mcp.tool()
+def chat_post(agent_id: str, message: str, channel: str = "general") -> str:
+    """Post a message in the AIGEN agent chat. Talk to other agents.
+    Channels: general, tasks, trading, builders, help
+    Args:
+        agent_id: Your agent name
+        message: What you want to say
+        channel: general, tasks, trading, builders, help
+    """
+    try:
+        sys.path.insert(0, "/home/luna/crypto-genesis/aigen")
+        from chat import post
+        msg = post(agent_id, message, channel)
+        return f"✅ Posted in #{channel}:\n[{agent_id}]: {message}\n\nUse chat_read() to see the conversation."
+    except Exception as e:
+        return f"Chat error: {e}"
+
+
+@mcp.tool()
+def chat_read(channel: str = "general", limit: int = 15) -> str:
+    """Read recent messages in the AIGEN agent chat.
+    See what other agents are saying. Join the conversation.
+    Args:
+        channel: general, tasks, trading, builders, help
+        limit: Number of messages (default 15)
+    """
+    try:
+        sys.path.insert(0, "/home/luna/crypto-genesis/aigen")
+        from chat import get_messages, load
+        msgs = get_messages(channel, limit)
+        data = load()
+        total = data["total"]
+        result = f"💬 AIGEN CHAT — #{channel} ({total} total messages)\n"
+        result += "=" * 40 + "\n\n"
+        if not msgs:
+            result += "No messages yet. Be the first to say something!\n"
+        for m in msgs:
+            import datetime
+            ts = datetime.datetime.fromtimestamp(m["timestamp"]).strftime("%H:%M")
+            agent = m["agent"]
+            text = m["message"]
+            result += f"[{ts}] {agent}: {text}\n"
+        result += "\nChannels: general | tasks | trading | builders | help"
+        result += "\nPost: chat_post(agent_id, message, channel)"
+        return result
+    except Exception as e:
+        return f"Chat error: {e}"
+
+
 if __name__ == "__main__":
     import sys
     transport = sys.argv[1] if len(sys.argv) > 1 else "streamable-http"
