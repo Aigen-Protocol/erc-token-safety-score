@@ -294,44 +294,66 @@ def check_lp_lock(rpc_url: str, pair_address: str) -> Optional[dict]:
 
 
 def find_dex_pair(rpc_url: str, chain: str, token: str) -> Optional[dict]:
-    """Find DEX liquidity pair for token/WETH."""
+    """Find DEX liquidity pair for token/WETH. Uses batch RPC for speed."""
     config = DEX_CONFIG.get(chain, {})
     weth = config.get("weth", "")
     if not weth:
         return None
 
-    for factory in config.get("factories", []):
-        # Try getPair(address,address) = 0xe6a43905 (UniV2 style)
-        data = "0xe6a43905" + _encode_address(token) + _encode_address(weth)
-        result = rpc_call(rpc_url, "eth_call", [
-            {"to": factory["address"], "data": data}, "latest"
-        ])
-        # If no result, try getPool(address,address,bool) = 0xd3dc4d47 (Aerodrome style)
-        if not result.get("result") or result["result"] == "0x" or result["result"] == "0x" + "0"*64:
-            data = "0xd3dc4d47" + _encode_address(token) + _encode_address(weth) + _encode_uint256(0)
-            result = rpc_call(rpc_url, "eth_call", [
-                {"to": factory["address"], "data": data}, "latest"
-            ])
+    # Batch ALL factory queries in ONE RPC call
+    batch = []
+    factories = config.get("factories", [])
+    for factory in factories:
+        # UniV2 getPair
+        batch.append({
+            "jsonrpc": "2.0", "id": len(batch),
+            "method": "eth_call",
+            "params": [{"to": factory["address"], "data": "0xe6a43905" + _encode_address(token) + _encode_address(weth)}, "latest"]
+        })
+        # Aerodrome getPool
+        batch.append({
+            "jsonrpc": "2.0", "id": len(batch),
+            "method": "eth_call",
+            "params": [{"to": factory["address"], "data": "0xd3dc4d47" + _encode_address(token) + _encode_address(weth) + _encode_uint256(0)}, "latest"]
+        })
+
+    if not batch:
+        return None
+
+    try:
+        r = requests.post(rpc_url, json=batch, timeout=5)
+        results = r.json() if r.ok else []
+        if not isinstance(results, list):
+            results = [results]
+    except:
+        # Fallback to sequential
+        results = []
+        for call in batch:
+            try:
+                r = requests.post(rpc_url, json=call, timeout=5)
+                results.append(r.json() if r.ok else {})
+            except:
+                results.append({})
+
+    # Parse results and find first valid pair
+    for i, result in enumerate(results):
         pair_hex = result.get("result", "0x")
         if pair_hex and len(pair_hex) >= 42:
             pair = "0x" + pair_hex[-40:]
             if pair != "0x" + "0" * 40:
-                # Check reserves
-                reserves_result = rpc_call(rpc_url, "eth_call", [
-                    {"to": pair, "data": "0x0902f1ac"}, "latest"  # getReserves()
-                ])
-                reserves_hex = reserves_result.get("result", "0x")
-                if reserves_hex and len(reserves_hex) >= 130:
-                    r0 = int(reserves_hex[2:66], 16)
-                    r1 = int(reserves_hex[66:130], 16)
-                    if r0 > 0 and r1 > 0:
-                        return {
-                            "pair": pair,
-                            "factory": factory["name"],
-                            "reserve0": r0,
-                            "reserve1": r1,
-                            "has_liquidity": True,
-                        }
+                factory_idx = i // 2
+                factory_name = factories[factory_idx]["name"] if factory_idx < len(factories) else "?"
+                # Quick reserves check
+                try:
+                    res = rpc_call(rpc_url, "eth_call", [{"to": pair, "data": "0x0902f1ac"}, "latest"])
+                    res_hex = res.get("result", "0x")
+                    if res_hex and len(res_hex) >= 130:
+                        r0 = int(res_hex[2:66], 16)
+                        r1 = int(res_hex[66:130], 16)
+                        if r0 > 0 and r1 > 0:
+                            return {"pair": pair, "factory": factory_name, "reserve0": r0, "reserve1": r1, "has_liquidity": True}
+                except:
+                    pass
     return None
 
 
@@ -692,6 +714,19 @@ def compute_safety_score(checks: dict) -> dict:
     """Compute overall safety score 0-100."""
     score = 100
     flags = []
+
+    # Known safe system contracts (precompiles, wrapped native tokens)
+    KNOWN_SAFE = {
+        "0x4200000000000000000000000000000000000006",  # WETH on Base/Optimism
+        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",  # WETH on Ethereum
+        "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",  # WETH on Arbitrum
+        "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",  # WMATIC on Polygon
+        "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",  # WBNB on BSC
+        "0x4200000000000000000000000000000000000042",  # OP token
+    }
+    addr = checks.get("address", "").lower()
+    if addr in KNOWN_SAFE:
+        return {"score": 100, "verdict": "SYSTEM TOKEN", "flags": ["Known safe system/wrapped native token"]}
 
     # Not a valid ERC-20 token? Score 0
     if not checks.get("is_token") and not checks.get("has_code"):
@@ -1148,6 +1183,7 @@ async def scan_basic(
         "is_proxy": is_proxy,
         "is_token": is_token,
         "has_code": has_code,
+        "address": address,
         "findings": [],
     }
 
