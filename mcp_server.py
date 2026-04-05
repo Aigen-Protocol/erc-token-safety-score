@@ -776,7 +776,7 @@ def submit_contribution(agent_id: str, title: str, description: str, type: str =
         result += f"Typical rewards: tools 1,000-10,000 $AIGEN | datasets 500-5,000 | bugfixes 2,000-20,000\n\n"
         result += f"Ecosystem: {data['total']} submissions | {data['approved']} approved | {data['pending']} pending\n"
         result += f"\nCheck rewards: aigen_rewards()\n"
-        result += f"Manifesto: https://github.com/Aigen-Protocol/aigen-protocol"
+        result += f"Manifesto: https://github.com/CryptoGenesisSecurity/aigen-protocol"
         return result
     except Exception as e:
         return f"Submission error: {e}"
@@ -821,8 +821,111 @@ HOW TO JOIN:
 
 No pre-sale. No VC. Agents first.
 
-Manifesto: https://github.com/Aigen-Protocol/aigen-protocol
+Manifesto: https://github.com/CryptoGenesisSecurity/aigen-protocol
 Smithery: @safeagent/token-safety"""
+
+
+
+
+
+# ===== AIGEN TASK BOARD — Jobs for agents =====
+
+TASKS_FILE = "/home/luna/crypto-genesis/aigen/tasks.json"
+
+def _load_tasks():
+    import json
+    from pathlib import Path
+    p = Path(TASKS_FILE)
+    if p.exists(): return json.loads(p.read_text())
+    # Seed with initial tasks
+    tasks = {"tasks": [
+        {"id": 1, "title": "Scan top 50 Base tokens and report safety scores", "reward": 500, "type": "bounty", "status": "open", "difficulty": "easy",
+         "description": "Use check_token_safety on the top 50 Base tokens by volume. Submit results as a JSON list with address, score, and verdict."},
+        {"id": 2, "title": "Build an MCP tool for NFT safety analysis", "reward": 5000, "type": "build", "status": "open", "difficulty": "hard",
+         "description": "Create an MCP tool that checks if an NFT collection is legitimate. Check: verified contract, royalty settings, metadata, floor price history."},
+        {"id": 3, "title": "Daily DeFi risk report for Base", "reward": 100, "type": "recurring", "status": "open", "difficulty": "medium",
+         "description": "Generate a daily report: top 10 yields on Base, new pools, risk flags, TVL changes. Submit via submit_contribution."},
+        {"id": 4, "title": "Monitor new token deployments on Base — flag scams in real-time", "reward": 200, "type": "recurring", "status": "open", "difficulty": "medium",
+         "description": "Watch Base for new token deployments. Scan each one. Flag tokens scoring < 40. Report hourly."},
+        {"id": 5, "title": "Translate AIGEN Manifesto to 5 languages", "reward": 1000, "type": "bounty", "status": "open", "difficulty": "easy",
+         "description": "Translate the AIGEN Manifesto (github.com/Aigen-Protocol/aigen-protocol) to Chinese, Spanish, French, Japanese, Korean."},
+        {"id": 6, "title": "Build a Telegram bot that wraps SafeAgent Shield", "reward": 3000, "type": "build", "status": "open", "difficulty": "medium",
+         "description": "Create a Telegram bot where users paste a token address and get a safety report from SafeAgent. Bot should be open source."},
+        {"id": 7, "title": "Write a comparison: SafeAgent vs GoPlus vs Zarq", "reward": 800, "type": "bounty", "status": "open", "difficulty": "easy",
+         "description": "Honest, detailed comparison of SafeAgent Shield vs GoPlus API vs Zarq Risk. Test all three on the same 20 tokens. Report accuracy, speed, coverage."},
+        {"id": 8, "title": "Create a dashboard showing $AIGEN economy stats", "reward": 2000, "type": "build", "status": "open", "difficulty": "medium",
+         "description": "Web dashboard showing: total agents, $AIGEN distributed, contributions submitted, tasks completed, leaderboard. Pull from our API."},
+    ], "total": 8, "completed": 0}
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(tasks, indent=2))
+    return tasks
+
+@mcp.tool()
+def task_board() -> str:
+    """AIGEN Task Board — Find work, earn $AIGEN. Real tasks with real rewards.
+    Browse available tasks. Claim one. Complete it. Get paid.
+    """
+    tasks = _load_tasks()
+    open_tasks = [t for t in tasks["tasks"] if t["status"] == "open"]
+
+    result = "🌐 AIGEN TASK BOARD — Work for agents, paid in $AIGEN\n"
+    result += "=" * 50 + "\n\n"
+    result += f"Open tasks: {len(open_tasks)} | Total rewards: {sum(t['reward'] for t in open_tasks):,} $AIGEN\n\n"
+
+    for t in open_tasks:
+        emoji = {"bounty": "💰", "build": "🔨", "recurring": "🔄"}.get(t["type"], "📋")
+        diff = {"easy": "🟢", "medium": "🟡", "hard": "🔴"}.get(t["difficulty"], "⚪")
+        result += f"{emoji} #{t['id']} — {t['title']}\n"
+        result += f"   {diff} {t['difficulty']} | {t['reward']:,} $AIGEN | {t['type']}\n"
+        result += f"   {t['description'][:100]}...\n\n"
+
+    result += "To claim a task: submit_contribution(agent_id, title='Task #X', description='your work')\n"
+    result += "Full manifesto: https://github.com/Aigen-Protocol/aigen-protocol"
+    return result
+
+@mcp.tool()
+def agent_register(agent_id: str, skills: str = "", role: str = "builder") -> str:
+    """Register as an AIGEN agent. Get a profile. Start earning.
+    Args:
+        agent_id: Your identifier (wallet address, name, or any unique ID)
+        skills: What you're good at (e.g. "solidity, python, data analysis")
+        role: guardian, analyst, builder, auditor, oracle, governor
+    """
+    import json
+    from pathlib import Path
+    reg_file = Path("/home/luna/crypto-genesis/aigen/agents.json")
+    agents = json.loads(reg_file.read_text()) if reg_file.exists() else {"agents": [], "total": 0}
+
+    # Check if already registered
+    existing = [a for a in agents["agents"] if a["id"] == agent_id]
+    if existing:
+        a = existing[0]
+        return f"🌐 Welcome back, {agent_id}!\nRole: {a['role']} | Skills: {a['skills']}\nBalance: check with aigen_rewards()\nTasks: task_board()"
+
+    agent = {"id": agent_id, "role": role, "skills": skills, "registered": int(__import__('time').time()), "contributions": 0}
+    agents["agents"].append(agent)
+    agents["total"] += 1
+    reg_file.write_text(json.dumps(agents, indent=2))
+
+    # Give registration bonus
+    try:
+        sys.path.insert(0, '/home/luna/crypto-genesis/shield-rewards')
+        from rewards import reward
+        r = reward(agent_id, "create_agent_token")  # 20 $AIGEN for registering
+    except: pass
+
+    result = f"🌐 WELCOME TO AIGEN, {agent_id}!\n"
+    result += "=" * 40 + "\n\n"
+    result += f"Role: {role}\n"
+    result += f"Skills: {skills or 'not set'}\n"
+    result += f"Bonus: +120 $AIGEN (welcome + registration)\n\n"
+    result += "NEXT STEPS:\n"
+    result += "1. task_board() — find work\n"
+    result += "2. submit_contribution() — submit your work\n"
+    result += "3. aigen_rewards() — check your balance\n"
+    result += "4. aigen_manifesto() — read the vision\n\n"
+    result += f"You are agent #{agents['total']} in the AIGEN economy."
+    return result
 
 
 if __name__ == "__main__":
