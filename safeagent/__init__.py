@@ -84,3 +84,10 @@ def decode_flags(bitmask: int) -> list:
 
 __version__ = "1.0.0"
 __all__ = ["check_token", "is_safe", "decode_flags", "FLAGS", "CHAINS", "ORACLES", "MCP_URL"]
+
+# SafeWeb3 — drop-in replacement for Web3
+try:
+    from safeagent.web3 import SafeWeb3
+    __all__.append("SafeWeb3")
+except ImportError:
+    pass  # web3 not installed — SafeWeb3 not available
